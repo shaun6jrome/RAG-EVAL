@@ -8,7 +8,7 @@ from services.embeddings import generate_and_store_embeddings
 from services.retrieval import retrieve_chunks
 from services.generation import generate_answer
 from services.evaluation import evaluate_faithfulness, evaluate_relevance
-from db.sqlite_client import log_query, update_log_evals, get_log, LogEntry
+from db.sqlite_client import log_query, update_log_evals, get_log, get_dashboard_stats, get_recent_logs, LogEntry
 
 class QueryRequest(BaseModel):
     query: str
@@ -114,3 +114,17 @@ async def get_log_entry(log_id: int):
     if not log:
         raise HTTPException(status_code=404, detail="Log not found")
     return log
+
+@app.get("/dashboard/stats")
+async def dashboard_stats():
+    try:
+        return get_dashboard_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch stats: {str(e)}")
+
+@app.get("/dashboard/logs")
+async def dashboard_logs(limit: int = 50):
+    try:
+        return get_recent_logs(limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch logs: {str(e)}")

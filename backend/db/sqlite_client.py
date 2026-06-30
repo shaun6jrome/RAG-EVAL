@@ -79,5 +79,34 @@ def get_log(log_id: int):
     conn.close()
     return dict(row) if row else None
 
+def get_dashboard_stats():
+    """Retrieves aggregate statistics for the dashboard."""
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_queries,
+            AVG(latency_ms) as avg_latency,
+            SUM(token_cost) as total_cost,
+            AVG(faithfulness_score) as avg_faithfulness,
+            AVG(relevance_score) as avg_relevance,
+            AVG(precision_score) as avg_precision
+        FROM query_logs
+    """)
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else {}
+
+def get_recent_logs(limit: int = 50):
+    """Retrieves the most recent query logs."""
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM query_logs ORDER BY id DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
 # Ensure DB is initialized when this module is imported
 init_db()
