@@ -110,6 +110,10 @@ export default function ChatInterface() {
         method: "POST",
         body: formData,
       });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Upload failed on the server.");
+      }
       const data = await res.json();
       setActiveFile(file.name);
       alert(`Uploaded! ${data.chunks_created} chunks created.`);
