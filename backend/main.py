@@ -1,8 +1,14 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from db.chroma_client import test_chroma_connection
 from services.ingestion import process_document
 from services.embeddings import generate_and_store_embeddings
+from services.retrieval import retrieve_chunks
+
+class QueryRequest(BaseModel):
+    query: str
+    top_k: int = 3
 
 app = FastAPI(
     title="RAG-Eval API",
@@ -48,3 +54,11 @@ async def upload_document(file: UploadFile = File(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
+
+@app.post("/retrieve")
+async def retrieve(request: QueryRequest):
+    try:
+        chunks = retrieve_chunks(request.query, request.top_k)
+        return {"query": request.query, "results": chunks}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve chunks: {str(e)}")
