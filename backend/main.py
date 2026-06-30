@@ -165,7 +165,8 @@ import asyncio
 @app.post("/eval/run")
 async def run_eval_suite():
     try:
-        with open("test_set.json", "r") as f:
+        test_set_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_set.json")
+        with open(test_set_path, "r") as f:
             test_set = json.load(f)
             
         results = []
@@ -179,13 +180,12 @@ async def run_eval_suite():
             chunk_texts = [c["document"] for c in chunks]
             
             # Avoid Gemini free tier rate limits (15 RPM)
-            import time
-            time.sleep(4) 
+            await asyncio.sleep(4) 
             
             faithfulness = evaluate_faithfulness(answer, chunk_texts)
-            time.sleep(4)
+            await asyncio.sleep(4)
             relevance = evaluate_relevance(query, answer)
-            time.sleep(4)
+            await asyncio.sleep(4)
             
             total_faithfulness += faithfulness
             total_relevance += relevance
