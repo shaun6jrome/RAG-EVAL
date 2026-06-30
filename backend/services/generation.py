@@ -11,12 +11,16 @@ client = openai.OpenAI(
     base_url="https://api.groq.com/openai/v1"
 )
 
-def generate_answer(query: str, retrieved_chunks: list[dict]) -> str:
+def generate_answer(query: str, retrieved_chunks: list[dict]) -> dict:
     """
     Generates an answer using Gemini, grounded in the retrieved chunks.
     """
     if not retrieved_chunks:
-        return "I could not find any relevant information to answer your question."
+        return {
+            "answer": "I could not find any relevant information to answer your question.",
+            "prompt_tokens": 0,
+            "completion_tokens": 0
+        }
         
     context = "\n\n---\n\n".join([chunk["document"] for chunk in retrieved_chunks])
     
@@ -35,4 +39,8 @@ Answer:"""
         temperature=0.0
     )
     
-    return response.choices[0].message.content
+    return {
+        "answer": response.choices[0].message.content,
+        "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+        "completion_tokens": response.usage.completion_tokens if response.usage else 0
+    }

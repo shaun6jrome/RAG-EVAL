@@ -1,5 +1,6 @@
 import time
 import os
+import logging
 from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +13,7 @@ from services.embeddings import generate_and_store_embeddings
 from services.retrieval import retrieve_chunks
 from services.generation import generate_answer
 from services.evaluation import evaluate_faithfulness, evaluate_relevance
-from db.sqlite_client import log_query, update_log_evals, get_log, get_dashboard_stats, get_recent_logs, LogEntry
+from db.sqlite_client import log_query, update_log_evals, get_log, get_dashboard_stats, get_recent_logs, get_unique_recent_queries, LogEntry
 
 class QueryRequest(BaseModel):
     query: str
@@ -23,6 +24,9 @@ app = FastAPI(
     description="Backend for RAG-Eval with observability and evaluation",
     version="1.0.0"
 )
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Configure Rate Limiting
 limiter = Limiter(key_func=get_remote_address)
@@ -52,7 +56,8 @@ async def health_check():
         test_chroma_connection()
         return {"status": "ok", "db": "connected"}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Database unavailable: {str(e)}")
+        logger.error(f"Database unavailable: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 @app.get("/chroma-test")
 async def chroma_test():
@@ -60,7 +65,8 @@ async def chroma_test():
         result = test_chroma_connection()
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"ChromaDB Error: {str(e)}")
+        logger.error(f"ChromaDB Error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal Server Error: Vector database issue")
 
 @app.post("/upload")
 @limiter.limit("5/minute")
@@ -84,7 +90,8 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
             "chunks_stored": num_stored
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
+        logger.error(f"Failed to process document: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to process document")
 
 @app.post("/retrieve")
 async def retrieve(request: QueryRequest):
@@ -92,7 +99,8 @@ async def retrieve(request: QueryRequest):
         chunks = retrieve_chunks(request.query, request.top_k)
         return {"query": request.query, "results": chunks}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve chunks: {str(e)}")
+        logger.error(f"Failed to retrieve chunks: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve information")
 
 def run_evals_background(log_id: int, query: str, answer: str, chunks: list[str]):
     # Extract just the text from the chunks for faithfulness evaluation
@@ -110,16 +118,22 @@ async def ask_question(request: Request, query_req: QueryRequest, background_tas
         chunks = retrieve_chunks(query_req.query, query_req.top_k)
         
         # 2. Generate answer
-        answer = generate_answer(query_req.query, chunks)
+        generation_result = generate_answer(query_req.query, chunks)
+        answer = generation_result["answer"]
         
         latency_ms = (time.time() - start_time) * 1000
+        
+        # Calculate true cost based on Groq Llama-3.3-70b pricing ($0.59/M input, $0.79/M output)
+        prompt_cost = (generation_result["prompt_tokens"] / 1_000_000) * 0.59
+        completion_cost = (generation_result["completion_tokens"] / 1_000_000) * 0.79
+        token_cost = prompt_cost + completion_cost
         
         # 3. Log query to SQLite
         log_entry = LogEntry(
             query=query_req.query,
             answer=answer,
             latency_ms=latency_ms,
-            token_cost=0.001 # Stub token cost
+            token_cost=token_cost
         )
         log_id = log_query(log_entry)
         
@@ -134,7 +148,8 @@ async def ask_question(request: Request, query_req: QueryRequest, background_tas
             "retrieved_chunks": chunks
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate answer: {str(e)}")
+        logger.error(f"Failed to generate answer: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate answer")
 
 @app.get("/log/{log_id}")
 async def get_log_entry(log_id: int):
@@ -148,14 +163,16 @@ async def dashboard_stats():
     try:
         return get_dashboard_stats()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch stats: {str(e)}")
+        logger.error(f"Failed to fetch stats: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to load dashboard statistics")
 
 @app.get("/dashboard/logs")
 async def dashboard_logs(limit: int = 50):
     try:
         return get_recent_logs(limit)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch logs: {str(e)}")
+        logger.error(f"Failed to fetch logs: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to load activity logs")
 
 import json
 from services.evaluation import evaluate_precision_recall
@@ -165,18 +182,18 @@ import asyncio
 @app.post("/eval/run")
 async def run_eval_suite():
     try:
-        test_set_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_set.json")
-        with open(test_set_path, "r") as f:
-            test_set = json.load(f)
+        queries = get_unique_recent_queries(10)
+        if not queries:
+            raise HTTPException(status_code=400, detail="No chat history found. Please ask at least 1 question first.")
             
         results = []
         total_faithfulness = 0
         total_relevance = 0
         
-        for item in test_set:
-            query = item["query"]
+        for query in queries:
             chunks = retrieve_chunks(query, top_k=3)
-            answer = generate_answer(query, chunks)
+            generation_result = generate_answer(query, chunks)
+            answer = generation_result["answer"]
             chunk_texts = [c["document"] for c in chunks]
             
             faithfulness = evaluate_faithfulness(answer, chunk_texts)
@@ -192,8 +209,8 @@ async def run_eval_suite():
                 "relevance": relevance,
             })
             
-        avg_faithfulness = total_faithfulness / len(test_set) if test_set else 0
-        avg_relevance = total_relevance / len(test_set) if test_set else 0
+        avg_faithfulness = total_faithfulness / len(queries) if queries else 0
+        avg_relevance = total_relevance / len(queries) if queries else 0
         
         return {
             "average_faithfulness": avg_faithfulness,
@@ -201,4 +218,5 @@ async def run_eval_suite():
             "results": results
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to run eval suite: {str(e)}")
+        logger.error(f"Failed to run eval suite: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to run evaluation suite")

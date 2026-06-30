@@ -10,7 +10,7 @@ services:
       - rag_eval_data:/app/data
     environment:
       - GROQ_API_KEY=${GROQ_API_KEY}
-      - FRONTEND_URL=http://localhost:3000,http://localhost:3001
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000,http://localhost:3001}
     restart: unless-stopped
 
 volumes:

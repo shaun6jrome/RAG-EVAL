@@ -78,7 +78,7 @@ export default function Dashboard() {
           <button 
             onClick={runEvalSuite}
             disabled={isEvalRunning}
-            className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-[var(--color-accent)] transition-colors text-sm font-medium rounded-lg disabled:opacity-50"
+            className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-[var(--color-accent)] hover:text-black transition-colors text-sm font-medium rounded-lg disabled:opacity-50"
           >
             {isEvalRunning ? <Activity className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
             {isEvalRunning ? "Running Suite..." : "Run Eval Suite"}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, Upload, FileText, ChevronDown, ChevronRight, Activity, ShieldCheck, Target, Zap, BarChart2 } from "lucide-react";
+import { Send, Upload, FileText, ChevronDown, ChevronRight, Activity, ShieldCheck, Target, Zap, BarChart2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -26,6 +26,36 @@ export default function ChatInterface() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedChunks, setExpandedChunks] = useState<string | null>(null);
+  const [activeFile, setActiveFile] = useState<string | null>(null);
+
+  // Initialize from localStorage
+  useEffect(() => {
+    try {
+      const savedMsgs = localStorage.getItem("rag_messages");
+      const savedFile = localStorage.getItem("rag_active_file");
+      if (savedMsgs) setMessages(JSON.parse(savedMsgs));
+      if (savedFile) setActiveFile(savedFile);
+    } catch (e) {
+      console.error("Failed to parse localStorage", e);
+    }
+  }, []);
+
+  // Save to localStorage when state changes
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("rag_messages", JSON.stringify(messages));
+    } else {
+      localStorage.removeItem("rag_messages");
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (activeFile) {
+      localStorage.setItem("rag_active_file", activeFile);
+    } else {
+      localStorage.removeItem("rag_active_file");
+    }
+  }, [activeFile]);
 
   // Poll for eval scores for assistant messages that lack them
   useEffect(() => {
@@ -81,6 +111,7 @@ export default function ChatInterface() {
         body: formData,
       });
       const data = await res.json();
+      setActiveFile(file.name);
       alert(`Uploaded! ${data.chunks_created} chunks created.`);
     } catch (error) {
       console.error(error);
@@ -178,8 +209,8 @@ export default function ChatInterface() {
               key={msg.id}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div className={`max-w-[85%] ${msg.role === "user" ? "bg-[var(--color-accent)] text-white" : "glass-panel"} p-5 rounded-2xl`}>
-                <div className="prose prose-invert max-w-none text-sm/relaxed">
+              <div className={`max-w-[85%] ${msg.role === "user" ? "bg-[var(--color-accent)] text-black" : "glass-panel"} p-5 rounded-2xl`}>
+                <div className={`prose max-w-none text-sm/relaxed ${msg.role === "user" ? "" : "prose-invert"}`}>
                   {msg.content}
                 </div>
                 
@@ -260,7 +291,26 @@ export default function ChatInterface() {
       </div>
 
       {/* Input Area */}
-      <div className="glass-panel p-2 rounded-2xl flex items-center relative">
+      <div className="mt-auto">
+        {activeFile && (
+          <div className="flex items-center justify-between glass-panel p-3 px-4 rounded-t-2xl border-b-0 border-[var(--color-glass-border)] text-sm font-medium">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[var(--color-accent)]" />
+              <span className="truncate max-w-[200px]">{activeFile}</span>
+            </div>
+            <button 
+              onClick={() => {
+                setActiveFile(null);
+                setMessages([]);
+              }}
+              className="text-gray-400 hover:text-white p-1 rounded-md transition-colors"
+              title="Close chat and clear local history"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        <div className={`glass-panel p-2 flex items-center relative ${activeFile ? 'rounded-b-2xl rounded-t-none' : 'rounded-2xl'}`}>
         <input
           type="text"
           value={input}
@@ -272,10 +322,11 @@ export default function ChatInterface() {
         <button 
           onClick={handleSend}
           disabled={!input.trim() || isLoading}
-          className="bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] disabled:opacity-50 text-white p-3 rounded-xl transition-colors ml-2"
+          className="bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] disabled:opacity-50 text-black p-3 rounded-xl transition-colors ml-2"
         >
           <Send className="w-5 h-5" />
         </button>
+      </div>
       </div>
     </div>
   );

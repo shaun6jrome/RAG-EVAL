@@ -16,23 +16,36 @@ class LogEntry(BaseModel):
     precision_score: Optional[float] = None
 
 def init_db():
-    """Initializes the SQLite database with the query_logs table."""
+    """Initializes the SQLite database with the query_logs table and handles migrations."""
     conn = sqlite3.connect(SQLITE_DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS query_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            query TEXT NOT NULL,
-            answer TEXT NOT NULL,
-            latency_ms REAL NOT NULL,
-            token_cost REAL DEFAULT 0.0,
-            faithfulness_score REAL,
-            relevance_score REAL,
-            precision_score REAL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.commit()
+    
+    cursor.execute("PRAGMA user_version")
+    version = cursor.fetchone()[0]
+    
+    if version == 0:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS query_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                query TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                latency_ms REAL NOT NULL,
+                token_cost REAL DEFAULT 0.0,
+                faithfulness_score REAL,
+                relevance_score REAL,
+                precision_score REAL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("PRAGMA user_version = 1")
+        conn.commit()
+    
+    # Future migrations can be added here:
+    # if version == 1:
+    #     cursor.execute("ALTER TABLE query_logs ADD COLUMN new_col TEXT")
+    #     cursor.execute("PRAGMA user_version = 2")
+    #     conn.commit()
+        
     conn.close()
 
 def log_query(entry: LogEntry):
@@ -107,6 +120,21 @@ def get_recent_logs(limit: int = 50):
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+def get_unique_recent_queries(limit: int = 10):
+    """Retrieves the most recent unique queries for realistic evaluation."""
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT query FROM query_logs 
+        GROUP BY query
+        ORDER BY MAX(id) DESC 
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [row["query"] for row in rows]
 
 # Ensure DB is initialized when this module is imported
 init_db()
