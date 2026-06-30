@@ -42,3 +42,5 @@ build/
 
 # Mac
 .DS_Store
+
+backend.log
