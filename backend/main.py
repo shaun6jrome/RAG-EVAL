@@ -128,3 +128,46 @@ async def dashboard_logs(limit: int = 50):
         return get_recent_logs(limit)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch logs: {str(e)}")
+
+import json
+from services.evaluation import evaluate_precision_recall
+
+@app.post("/eval/run")
+async def run_eval_suite():
+    try:
+        with open("test_set.json", "r") as f:
+            test_set = json.load(f)
+            
+        results = []
+        total_faithfulness = 0
+        total_relevance = 0
+        
+        for item in test_set:
+            query = item["query"]
+            chunks = retrieve_chunks(query, top_k=3)
+            answer = generate_answer(query, chunks)
+            chunk_texts = [c["document"] for c in chunks]
+            
+            faithfulness = evaluate_faithfulness(answer, chunk_texts)
+            relevance = evaluate_relevance(query, answer)
+            
+            total_faithfulness += faithfulness
+            total_relevance += relevance
+            
+            results.append({
+                "query": query,
+                "answer": answer,
+                "faithfulness": faithfulness,
+                "relevance": relevance,
+            })
+            
+        avg_faithfulness = total_faithfulness / len(test_set) if test_set else 0
+        avg_relevance = total_relevance / len(test_set) if test_set else 0
+        
+        return {
+            "average_faithfulness": avg_faithfulness,
+            "average_relevance": avg_relevance,
+            "results": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to run eval suite: {str(e)}")

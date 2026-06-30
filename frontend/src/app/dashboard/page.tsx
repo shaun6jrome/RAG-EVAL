@@ -19,6 +19,8 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEvalRunning, setIsEvalRunning] = useState(false);
+  const [evalResults, setEvalResults] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,6 +46,21 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  const runEvalSuite = async () => {
+    setIsEvalRunning(true);
+    setEvalResults(null);
+    try {
+      const res = await fetch("http://localhost:8000/eval/run", { method: "POST" });
+      const data = await res.json();
+      setEvalResults(data);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to run eval suite");
+    } finally {
+      setIsEvalRunning(false);
+    }
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
       <header className="flex justify-between items-center mb-8 glass-panel p-4 px-6">
@@ -54,11 +71,56 @@ export default function Dashboard() {
           <p className="text-sm text-gray-400 font-sans">RAG System Performance & Evals</p>
         </div>
         
-        <Link href="/" className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm font-medium">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Chat
-        </Link>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={runEvalSuite}
+            disabled={isEvalRunning}
+            className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-[var(--color-accent)] transition-colors text-sm font-medium rounded-lg disabled:opacity-50"
+          >
+            {isEvalRunning ? <Activity className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+            {isEvalRunning ? "Running Suite..." : "Run Eval Suite"}
+          </button>
+          <Link href="/" className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm font-medium">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Chat
+          </Link>
+        </div>
       </header>
+
+      {evalResults && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 glass-panel p-6 rounded-2xl border border-[var(--color-accent)]"
+        >
+          <h2 className="text-xl font-heading font-semibold mb-4 text-[var(--color-accent)]">Eval Suite Results</h2>
+          <div className="flex gap-8 mb-6">
+            <div>
+              <p className="text-sm text-gray-400">Avg Faithfulness</p>
+              <p className="text-2xl font-mono text-green-400">{evalResults.average_faithfulness.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">Avg Relevance</p>
+              <p className="text-2xl font-mono text-amber-400">{evalResults.average_relevance.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {evalResults.results.map((res: any, idx: number) => (
+              <div key={idx} className="bg-black/30 p-4 rounded-lg">
+                <p className="font-medium text-sm mb-2 text-white">Q: {res.query}</p>
+                <div className="flex gap-4 text-xs font-mono">
+                  <span className={res.faithfulness >= 0.8 ? "text-green-400" : "text-red-400"}>
+                    Faithfulness: {res.faithfulness.toFixed(2)}
+                  </span>
+                  <span className={res.relevance >= 0.8 ? "text-amber-400" : "text-red-400"}>
+                    Relevance: {res.relevance.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {isLoading && !stats ? (
         <div className="flex justify-center p-12">
