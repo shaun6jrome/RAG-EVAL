@@ -7,3 +7,5 @@ openai
 google-generativeai
 pydantic
 PyPDF2
+slowapi
+langchain-text-splitters
