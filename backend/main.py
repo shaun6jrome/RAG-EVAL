@@ -5,6 +5,7 @@ from db.chroma_client import test_chroma_connection
 from services.ingestion import process_document
 from services.embeddings import generate_and_store_embeddings
 from services.retrieval import retrieve_chunks
+from services.generation import generate_answer
 
 class QueryRequest(BaseModel):
     query: str
@@ -62,3 +63,20 @@ async def retrieve(request: QueryRequest):
         return {"query": request.query, "results": chunks}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve chunks: {str(e)}")
+
+@app.post("/ask")
+async def ask_question(request: QueryRequest):
+    try:
+        # 1. Retrieve chunks
+        chunks = retrieve_chunks(request.query, request.top_k)
+        
+        # 2. Generate answer
+        answer = generate_answer(request.query, chunks)
+        
+        return {
+            "query": request.query,
+            "answer": answer,
+            "retrieved_chunks": chunks
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate answer: {str(e)}")
