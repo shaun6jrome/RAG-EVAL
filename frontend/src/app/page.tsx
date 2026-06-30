@@ -32,13 +32,13 @@ export default function ChatInterface() {
     const interval = setInterval(async () => {
       setMessages((prevMessages) => {
         const updatedMessages = [...prevMessages];
-        let needsUpdate = false;
         
         for (let i = 0; i < updatedMessages.length; i++) {
           const msg = updatedMessages[i];
           if (msg.role === "assistant" && msg.log_id && !msg.eval_scores) {
             // Fetch log
-            fetch(`http://localhost:8000/log/${msg.log_id}`)
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+            fetch(`${API_URL}/log/${msg.log_id}`)
               .then((res) => res.json())
               .then((data) => {
                 if (data.faithfulness_score !== null && data.relevance_score !== null) {
@@ -75,7 +75,8 @@ export default function ChatInterface() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:8000/upload", {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/upload`, {
         method: "POST",
         body: formData,
       });
@@ -98,7 +99,8 @@ export default function ChatInterface() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/ask", {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userMsg.content, top_k: 3 }),

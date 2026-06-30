@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 # Path to the sqlite db
-SQLITE_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "rag_logs.db")
+SQLITE_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "rag_logs.db")
 
 class LogEntry(BaseModel):
     query: str

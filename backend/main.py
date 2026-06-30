@@ -1,7 +1,11 @@
 import time
-from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks
+import os
+from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from db.chroma_client import test_chroma_connection
 from services.ingestion import process_document
 from services.embeddings import generate_and_store_embeddings
@@ -20,10 +24,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS for the frontend (Next.js typically runs on port 3000 locally)
+# Configure Rate Limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Configure CORS
+frontend_urls = os.getenv("FRONTEND_URL", "http://localhost:3000,http://localhost:3001").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"], # Add port 3001
+    allow_origins=frontend_urls,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,7 +45,14 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    # Verify DB connection
+    try:
+        from db.sqlite_client import get_dashboard_stats
+        get_dashboard_stats()
+        test_chroma_connection()
+        return {"status": "ok", "db": "connected"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database unavailable: {str(e)}")
 
 @app.get("/chroma-test")
 async def chroma_test():
@@ -46,9 +63,19 @@ async def chroma_test():
         raise HTTPException(status_code=500, detail=f"ChromaDB Error: {str(e)}")
 
 @app.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
+@limiter.limit("5/minute")
+async def upload_document(request: Request, file: UploadFile = File(...)):
     try:
+        # Validate file type
+        if file.content_type not in ["text/plain", "application/pdf"]:
+            raise HTTPException(status_code=400, detail="Only .txt and .pdf files are supported")
+        
         contents = await file.read()
+        
+        # Validate file size (e.g. 5MB)
+        if len(contents) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
+
         chunks = process_document(contents, file.filename)
         num_stored = generate_and_store_embeddings(chunks, file.filename)
         return {
@@ -75,20 +102,21 @@ def run_evals_background(log_id: int, query: str, answer: str, chunks: list[str]
     update_log_evals(log_id, faithfulness, relevance)
 
 @app.post("/ask")
-async def ask_question(request: QueryRequest, background_tasks: BackgroundTasks):
+@limiter.limit("20/minute")
+async def ask_question(request: Request, query_req: QueryRequest, background_tasks: BackgroundTasks):
     start_time = time.time()
     try:
         # 1. Retrieve chunks
-        chunks = retrieve_chunks(request.query, request.top_k)
+        chunks = retrieve_chunks(query_req.query, query_req.top_k)
         
         # 2. Generate answer
-        answer = generate_answer(request.query, chunks)
+        answer = generate_answer(query_req.query, chunks)
         
         latency_ms = (time.time() - start_time) * 1000
         
         # 3. Log query to SQLite
         log_entry = LogEntry(
-            query=request.query,
+            query=query_req.query,
             answer=answer,
             latency_ms=latency_ms,
             token_cost=0.001 # Stub token cost
@@ -96,11 +124,11 @@ async def ask_question(request: QueryRequest, background_tasks: BackgroundTasks)
         log_id = log_query(log_entry)
         
         # 4. Trigger background evals
-        background_tasks.add_task(run_evals_background, log_id, request.query, answer, chunks)
+        background_tasks.add_task(run_evals_background, log_id, query_req.query, answer, chunks)
         
         return {
             "log_id": log_id,
-            "query": request.query,
+            "query": query_req.query,
             "answer": answer,
             "latency_ms": latency_ms,
             "retrieved_chunks": chunks

@@ -2,13 +2,13 @@ import chromadb
 import os
 
 # Directory for local ChromaDB
-CHROMA_DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chroma_db")
+CHROMA_DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "chroma_db")
 
 def get_chroma_client():
     """
     Returns a persistent ChromaDB client pointing to the local chroma_db directory.
     """
-    client = chromadb.PersistentClient(path=CHROMA_DATA_PATH)
+    client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
     return client
 
 def test_chroma_connection():

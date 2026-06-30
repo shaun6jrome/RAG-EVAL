@@ -24,10 +24,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       try {
         const [statsRes, logsRes] = await Promise.all([
-          fetch("http://localhost:8000/dashboard/stats"),
-          fetch("http://localhost:8000/dashboard/logs?limit=20")
+          fetch(`${API_URL}/dashboard/stats`),
+          fetch(`${API_URL}/dashboard/logs?limit=20`)
         ]);
         const statsData = await statsRes.json();
         const logsData = await logsRes.json();
@@ -50,7 +51,9 @@ export default function Dashboard() {
     setIsEvalRunning(true);
     setEvalResults(null);
     try {
-      const res = await fetch("http://localhost:8000/eval/run", { method: "POST" });
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/eval/run`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to run eval suite");
       const data = await res.json();
       setEvalResults(data);
     } catch (err) {
