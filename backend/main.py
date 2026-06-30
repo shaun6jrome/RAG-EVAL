@@ -1,3 +1,4 @@
+import time
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +7,7 @@ from services.ingestion import process_document
 from services.embeddings import generate_and_store_embeddings
 from services.retrieval import retrieve_chunks
 from services.generation import generate_answer
+from db.sqlite_client import log_query, LogEntry
 
 class QueryRequest(BaseModel):
     query: str
@@ -66,6 +68,7 @@ async def retrieve(request: QueryRequest):
 
 @app.post("/ask")
 async def ask_question(request: QueryRequest):
+    start_time = time.time()
     try:
         # 1. Retrieve chunks
         chunks = retrieve_chunks(request.query, request.top_k)
@@ -73,9 +76,24 @@ async def ask_question(request: QueryRequest):
         # 2. Generate answer
         answer = generate_answer(request.query, chunks)
         
+        latency_ms = (time.time() - start_time) * 1000
+        
+        # 3. Log query to SQLite
+        # Note: Evals will be updated asynchronously in a later phase, 
+        # for now we leave scores as None
+        log_entry = LogEntry(
+            query=request.query,
+            answer=answer,
+            latency_ms=latency_ms,
+            token_cost=0.001 # Stub token cost
+        )
+        log_id = log_query(log_entry)
+        
         return {
+            "log_id": log_id,
             "query": request.query,
             "answer": answer,
+            "latency_ms": latency_ms,
             "retrieved_chunks": chunks
         }
     except Exception as e:
