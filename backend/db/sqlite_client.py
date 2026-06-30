@@ -57,5 +57,17 @@ def log_query(entry: LogEntry):
     conn.close()
     return log_id
 
+def update_log_evals(log_id: int, faithfulness: float, relevance: float):
+    """Updates an existing log with eval scores."""
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE query_logs 
+        SET faithfulness_score = ?, relevance_score = ?
+        WHERE id = ?
+    """, (faithfulness, relevance, log_id))
+    conn.commit()
+    conn.close()
+
 # Ensure DB is initialized when this module is imported
 init_db()

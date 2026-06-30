@@ -1,5 +1,5 @@
 import time
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from db.chroma_client import test_chroma_connection
@@ -7,7 +7,8 @@ from services.ingestion import process_document
 from services.embeddings import generate_and_store_embeddings
 from services.retrieval import retrieve_chunks
 from services.generation import generate_answer
-from db.sqlite_client import log_query, LogEntry
+from services.evaluation import evaluate_faithfulness, evaluate_relevance
+from db.sqlite_client import log_query, update_log_evals, LogEntry
 
 class QueryRequest(BaseModel):
     query: str
@@ -66,8 +67,15 @@ async def retrieve(request: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve chunks: {str(e)}")
 
+def run_evals_background(log_id: int, query: str, answer: str, chunks: list[str]):
+    # Extract just the text from the chunks for faithfulness evaluation
+    chunk_texts = [c["document"] for c in chunks]
+    faithfulness = evaluate_faithfulness(answer, chunk_texts)
+    relevance = evaluate_relevance(query, answer)
+    update_log_evals(log_id, faithfulness, relevance)
+
 @app.post("/ask")
-async def ask_question(request: QueryRequest):
+async def ask_question(request: QueryRequest, background_tasks: BackgroundTasks):
     start_time = time.time()
     try:
         # 1. Retrieve chunks
@@ -79,8 +87,6 @@ async def ask_question(request: QueryRequest):
         latency_ms = (time.time() - start_time) * 1000
         
         # 3. Log query to SQLite
-        # Note: Evals will be updated asynchronously in a later phase, 
-        # for now we leave scores as None
         log_entry = LogEntry(
             query=request.query,
             answer=answer,
@@ -88,6 +94,9 @@ async def ask_question(request: QueryRequest):
             token_cost=0.001 # Stub token cost
         )
         log_id = log_query(log_entry)
+        
+        # 4. Trigger background evals
+        background_tasks.add_task(run_evals_background, log_id, request.query, answer, chunks)
         
         return {
             "log_id": log_id,
