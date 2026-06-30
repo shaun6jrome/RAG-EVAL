@@ -224,6 +224,75 @@ export default function Dashboard() {
           </div>
         </motion.div>
       )}
+
+      {/* Recent Queries Table */}
+      {!isLoading && logs.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-6 glass-panel p-6 rounded-2xl overflow-hidden"
+        >
+          <h2 className="text-xl font-heading font-semibold mb-6">Recent Queries</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-gray-400 uppercase bg-black/20">
+                <tr>
+                  <th className="px-6 py-3 rounded-tl-lg">ID</th>
+                  <th className="px-6 py-3">Query</th>
+                  <th className="px-6 py-3">Faithfulness</th>
+                  <th className="px-6 py-3">Relevance</th>
+                  <th className="px-6 py-3">Latency</th>
+                  <th className="px-6 py-3 rounded-tr-lg">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* logs are in reverse chronological order from state, but for table we might want newest first. Wait, state `logs` is oldest-to-newest for charts. Let's reverse for the table */}
+                {[...logs].reverse().map((log) => (
+                  <tr key={log.id} className="border-b border-[var(--color-glass-border)] hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4 font-mono">{log.id}</td>
+                    <td className="px-6 py-4 font-medium max-w-xs truncate" title={log.query}>
+                      {log.query}
+                    </td>
+                    <td className="px-6 py-4">
+                      {log.faithfulness_score !== null ? (
+                        <span className={`px-2 py-1 rounded-full text-xs font-mono border ${
+                          log.faithfulness_score >= 0.8 ? "text-green-400 border-green-900 bg-green-950/30" : 
+                          log.faithfulness_score >= 0.5 ? "text-amber-400 border-amber-900 bg-amber-950/30" : 
+                          "text-red-400 border-red-900 bg-red-950/30"
+                        }`}>
+                          {log.faithfulness_score.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500 italic text-xs">Evaluating...</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {log.relevance_score !== null ? (
+                        <span className={`px-2 py-1 rounded-full text-xs font-mono border ${
+                          log.relevance_score >= 0.8 ? "text-green-400 border-green-900 bg-green-950/30" : 
+                          log.relevance_score >= 0.5 ? "text-amber-400 border-amber-900 bg-amber-950/30" : 
+                          "text-red-400 border-red-900 bg-red-950/30"
+                        }`}>
+                          {log.relevance_score.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500 italic text-xs">Evaluating...</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 font-mono text-gray-300">
+                      {log.latency_ms.toFixed(0)} ms
+                    </td>
+                    <td className="px-6 py-4 text-gray-400 font-mono text-xs">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
