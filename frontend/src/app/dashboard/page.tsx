@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Activity, Clock, DollarSign, ShieldCheck, Target, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 type DashboardStats = {
   total_queries: number;
@@ -16,24 +17,30 @@ type DashboardStats = {
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [logs, setLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch("http://localhost:8000/dashboard/stats");
-        const data = await res.json();
-        setStats(data);
+        const [statsRes, logsRes] = await Promise.all([
+          fetch("http://localhost:8000/dashboard/stats"),
+          fetch("http://localhost:8000/dashboard/logs?limit=20")
+        ]);
+        const statsData = await statsRes.json();
+        const logsData = await logsRes.json();
+        setStats(statsData);
+        // Reverse logs for chronological order in charts
+        setLogs(logsData.reverse());
       } catch (err) {
-        console.error("Failed to fetch dashboard stats", err);
+        console.error("Failed to fetch dashboard data", err);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchStats();
-    // Poll every 5 seconds for updates
-    const interval = setInterval(fetchStats, 5000);
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -100,6 +107,41 @@ export default function Dashboard() {
             <span className="text-3xl font-bold font-mono text-amber-400">
               {stats?.avg_relevance ? stats.avg_relevance.toFixed(2) : "N/A"}
             </span>
+          </div>
+        </motion.div>
+      )}
+
+      {!isLoading && logs.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mt-8 glass-panel p-6 rounded-2xl"
+        >
+          <h2 className="text-xl font-heading font-semibold mb-6 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-[var(--color-accent)]" />
+            Latency Trend (ms)
+          </h2>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={logs}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                <XAxis dataKey="id" stroke="#666" tick={{ fill: '#666' }} />
+                <YAxis stroke="#666" tick={{ fill: '#666' }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '8px' }}
+                  itemStyle={{ color: 'var(--color-accent)' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="latency_ms" 
+                  stroke="var(--color-accent)" 
+                  strokeWidth={2}
+                  dot={{ fill: 'var(--color-accent)', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </motion.div>
       )}
