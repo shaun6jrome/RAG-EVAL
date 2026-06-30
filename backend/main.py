@@ -90,7 +90,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         }
     except Exception as e:
         logger.error(f"Failed to process document: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to process document")
+        raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
 
 @app.post("/retrieve")
 async def retrieve(request: QueryRequest):
