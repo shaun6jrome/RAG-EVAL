@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, Upload, FileText, ChevronDown, ChevronRight, Activity, ShieldCheck, Target, Zap } from "lucide-react";
+import { Send, Upload, FileText, ChevronDown, ChevronRight, Activity, ShieldCheck, Target, Zap, BarChart2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 type EvalScores = {
   faithfulness?: number;
@@ -139,6 +140,10 @@ export default function ChatInterface() {
         </div>
         
         <div className="flex gap-4 items-center">
+          <Link href="/dashboard" className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm font-medium">
+            <BarChart2 className="w-4 h-4" />
+            Dashboard
+          </Link>
           <label className="cursor-pointer glass-panel px-4 py-2 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm font-medium">
             {isUploading ? <Activity className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             <span>Upload Document</span>
