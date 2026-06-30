@@ -67,7 +67,7 @@ export default function ChatInterface() {
           const msg = updatedMessages[i];
           if (msg.role === "assistant" && msg.log_id && !msg.eval_scores) {
             // Fetch log
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+            const API_URL = "https://rag-eval-backend-y97e.onrender.com";
             fetch(`${API_URL}/log/${msg.log_id}`)
               .then((res) => res.json())
               .then((data) => {
@@ -105,7 +105,7 @@ export default function ChatInterface() {
     formData.append("file", file);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const API_URL = "https://rag-eval-backend-y97e.onrender.com";
       const res = await fetch(`${API_URL}/upload`, {
         method: "POST",
         body: formData,
@@ -130,7 +130,7 @@ export default function ChatInterface() {
     setIsLoading(true);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const API_URL = "https://rag-eval-backend-y97e.onrender.com";
       const res = await fetch(`${API_URL}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

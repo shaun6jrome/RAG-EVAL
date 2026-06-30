@@ -24,7 +24,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const API_URL = "https://rag-eval-backend-y97e.onrender.com";
       try {
         const [statsRes, logsRes] = await Promise.all([
           fetch(`${API_URL}/dashboard/stats`),
@@ -51,7 +51,7 @@ export default function Dashboard() {
     setIsEvalRunning(true);
     setEvalResults(null);
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const API_URL = "https://rag-eval-backend-y97e.onrender.com";
       const res = await fetch(`${API_URL}/eval/run`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to run eval suite");
       const data = await res.json();
