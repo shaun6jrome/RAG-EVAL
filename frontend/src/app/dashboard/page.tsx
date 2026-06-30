@@ -112,38 +112,73 @@ export default function Dashboard() {
       )}
 
       {!isLoading && logs.length > 0 && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mt-8 glass-panel p-6 rounded-2xl"
-        >
-          <h2 className="text-xl font-heading font-semibold mb-6 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-[var(--color-accent)]" />
-            Latency Trend (ms)
-          </h2>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={logs}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                <XAxis dataKey="id" stroke="#666" tick={{ fill: '#666' }} />
-                <YAxis stroke="#666" tick={{ fill: '#666' }} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '8px' }}
-                  itemStyle={{ color: 'var(--color-accent)' }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="latency_ms" 
-                  stroke="var(--color-accent)" 
-                  strokeWidth={2}
-                  dot={{ fill: 'var(--color-accent)', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass-panel p-6 rounded-2xl"
+          >
+            <h2 className="text-xl font-heading font-semibold mb-6 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-[var(--color-accent)]" />
+              Latency Trend (ms)
+            </h2>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={logs}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                  <XAxis dataKey="id" stroke="#666" tick={{ fill: '#666' }} />
+                  <YAxis stroke="#666" tick={{ fill: '#666' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '8px' }}
+                    itemStyle={{ color: 'var(--color-accent)' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="latency_ms" 
+                    stroke="var(--color-accent)" 
+                    strokeWidth={2}
+                    dot={{ fill: 'var(--color-accent)', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass-panel p-6 rounded-2xl"
+          >
+            <h2 className="text-xl font-heading font-semibold mb-6 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-emerald-400" />
+              Cost Trend ($)
+            </h2>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={logs}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                  <XAxis dataKey="id" stroke="#666" tick={{ fill: '#666' }} />
+                  <YAxis stroke="#666" tick={{ fill: '#666' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '8px' }}
+                    itemStyle={{ color: '#34d399' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="token_cost" 
+                    stroke="#34d399" 
+                    strokeWidth={2}
+                    dot={{ fill: '#34d399', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );
