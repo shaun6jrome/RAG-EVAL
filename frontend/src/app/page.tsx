@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Send, Upload, FileText, ChevronDown, ChevronRight, Activity } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Send, Upload, FileText, ChevronDown, ChevronRight, Activity, ShieldCheck, Target, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+type EvalScores = {
+  faithfulness?: number;
+  relevance?: number;
+  precision?: number;
+};
 
 type Message = {
   id: string;
+  log_id?: number;
   role: "user" | "assistant";
   content: string;
   retrieved_chunks?: any[];
+  eval_scores?: EvalScores;
 };
 
 export default function ChatInterface() {
@@ -17,6 +25,45 @@ export default function ChatInterface() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedChunks, setExpandedChunks] = useState<string | null>(null);
+
+  // Poll for eval scores for assistant messages that lack them
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      setMessages((prevMessages) => {
+        const updatedMessages = [...prevMessages];
+        let needsUpdate = false;
+        
+        for (let i = 0; i < updatedMessages.length; i++) {
+          const msg = updatedMessages[i];
+          if (msg.role === "assistant" && msg.log_id && !msg.eval_scores) {
+            // Fetch log
+            fetch(`http://localhost:8000/log/${msg.log_id}`)
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.faithfulness_score !== null && data.relevance_score !== null) {
+                  setMessages((current) => {
+                    const next = [...current];
+                    const idx = next.findIndex(m => m.id === msg.id);
+                    if (idx !== -1) {
+                      next[idx].eval_scores = {
+                        faithfulness: data.faithfulness_score,
+                        relevance: data.relevance_score,
+                        precision: data.precision_score,
+                      };
+                    }
+                    return next;
+                  });
+                }
+              })
+              .catch(() => {});
+          }
+        }
+        return prevMessages; // The actual state update happens in the promise resolution
+      });
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
@@ -59,6 +106,7 @@ export default function ChatInterface() {
       
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
+        log_id: data.log_id,
         role: "assistant",
         content: data.answer,
         retrieved_chunks: data.retrieved_chunks,
@@ -70,6 +118,13 @@ export default function ChatInterface() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getScoreColor = (score?: number) => {
+    if (score === undefined || score === null) return "text-gray-500 border-gray-700 bg-gray-800/30";
+    if (score >= 0.8) return "text-green-400 border-green-900 bg-green-950/30";
+    if (score >= 0.5) return "text-amber-400 border-amber-900 bg-amber-950/30";
+    return "text-red-400 border-red-900 bg-red-950/30";
   };
 
   return (
@@ -114,7 +169,31 @@ export default function ChatInterface() {
                   {msg.content}
                 </div>
                 
-                {/* Context viewer for assistant responses */}
+                {/* Eval Badges */}
+                {msg.role === "assistant" && msg.log_id && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {!msg.eval_scores ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-full border border-[var(--color-glass-border)] bg-[var(--color-glass)] text-gray-400">
+                        <Activity className="w-3 h-3 animate-spin" />
+                        Evaluating...
+                      </span>
+                    ) : (
+                      <>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-full border ${getScoreColor(msg.eval_scores.faithfulness)}`}>
+                          <ShieldCheck className="w-3 h-3" />
+                          Faithfulness: {msg.eval_scores.faithfulness?.toFixed(2) || "N/A"}
+                        </span>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-full border ${getScoreColor(msg.eval_scores.relevance)}`}>
+                          <Target className="w-3 h-3" />
+                          Relevance: {msg.eval_scores.relevance?.toFixed(2) || "N/A"}
+                        </span>
+                        {/* Precision is not calculated on the fly yet, so we omit or show N/A */}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Context viewer */}
                 {msg.role === "assistant" && msg.retrieved_chunks && msg.retrieved_chunks.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-[var(--color-glass-border)]">
                     <button 
@@ -136,8 +215,9 @@ export default function ChatInterface() {
                           <div className="mt-3 space-y-2">
                             {msg.retrieved_chunks.map((chunk, idx) => (
                               <div key={idx} className="bg-black/30 p-3 rounded-lg border border-[var(--color-glass-border)]">
-                                <div className="text-[10px] text-[var(--color-accent)] uppercase tracking-wider mb-1 font-mono">
-                                  Source: {chunk.metadata.source} (Chunk {chunk.metadata.chunk_index})
+                                <div className="text-[10px] text-[var(--color-accent)] uppercase tracking-wider mb-1 font-mono flex items-center justify-between">
+                                  <span>Source: {chunk.metadata.source} (Chunk {chunk.metadata.chunk_index})</span>
+                                  <span className="text-gray-500">Dist: {chunk.distance?.toFixed(3)}</span>
                                 </div>
                                 <div className="text-xs text-gray-300 font-mono line-clamp-3 hover:line-clamp-none transition-all">
                                   {chunk.document}

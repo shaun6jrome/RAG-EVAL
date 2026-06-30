@@ -8,7 +8,7 @@ from services.embeddings import generate_and_store_embeddings
 from services.retrieval import retrieve_chunks
 from services.generation import generate_answer
 from services.evaluation import evaluate_faithfulness, evaluate_relevance
-from db.sqlite_client import log_query, update_log_evals, LogEntry
+from db.sqlite_client import log_query, update_log_evals, get_log, LogEntry
 
 class QueryRequest(BaseModel):
     query: str
@@ -107,3 +107,10 @@ async def ask_question(request: QueryRequest, background_tasks: BackgroundTasks)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate answer: {str(e)}")
+
+@app.get("/log/{log_id}")
+async def get_log_entry(log_id: int):
+    log = get_log(log_id)
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+    return log

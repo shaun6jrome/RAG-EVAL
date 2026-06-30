@@ -69,5 +69,15 @@ def update_log_evals(log_id: int, faithfulness: float, relevance: float):
     conn.commit()
     conn.close()
 
+def get_log(log_id: int):
+    """Retrieves a single log by ID."""
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM query_logs WHERE id = ?", (log_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 # Ensure DB is initialized when this module is imported
 init_db()
