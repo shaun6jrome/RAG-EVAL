@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from db.chroma_client import test_chroma_connection
 from services.ingestion import process_document
+from services.embeddings import generate_and_store_embeddings
 
 app = FastAPI(
     title="RAG-Eval API",
@@ -39,9 +40,11 @@ async def upload_document(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         chunks = process_document(contents, file.filename)
+        num_stored = generate_and_store_embeddings(chunks, file.filename)
         return {
-            "message": f"Successfully processed {file.filename}",
-            "chunks_created": len(chunks)
+            "message": f"Successfully processed and embedded {file.filename}",
+            "chunks_created": len(chunks),
+            "chunks_stored": num_stored
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")

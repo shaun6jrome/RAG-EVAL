@@ -6,3 +6,5 @@ chromadb
 python-multipart
 PyPDF2
 langchain-text-splitters
+sentence-transformers
+torch
