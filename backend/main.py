@@ -132,6 +132,8 @@ async def dashboard_logs(limit: int = 50):
 import json
 from services.evaluation import evaluate_precision_recall
 
+import asyncio
+# ... wait we can use asyncio.sleep because it's async def
 @app.post("/eval/run")
 async def run_eval_suite():
     try:
@@ -148,8 +150,14 @@ async def run_eval_suite():
             answer = generate_answer(query, chunks)
             chunk_texts = [c["document"] for c in chunks]
             
+            # Avoid Gemini free tier rate limits (15 RPM)
+            import time
+            time.sleep(4) 
+            
             faithfulness = evaluate_faithfulness(answer, chunk_texts)
+            time.sleep(4)
             relevance = evaluate_relevance(query, answer)
+            time.sleep(4)
             
             total_faithfulness += faithfulness
             total_relevance += relevance
