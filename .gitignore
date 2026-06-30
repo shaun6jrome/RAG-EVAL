@@ -44,3 +44,6 @@ build/
 .DS_Store
 
 backend.log
+
+# Data persistence
+backend/data/
