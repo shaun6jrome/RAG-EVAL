@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from db.chroma_client import test_chroma_connection
+from services.ingestion import process_document
 
 app = FastAPI(
     title="RAG-Eval API",
@@ -32,3 +33,15 @@ async def chroma_test():
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"ChromaDB Error: {str(e)}")
+
+@app.post("/upload")
+async def upload_document(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        chunks = process_document(contents, file.filename)
+        return {
+            "message": f"Successfully processed {file.filename}",
+            "chunks_created": len(chunks)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")

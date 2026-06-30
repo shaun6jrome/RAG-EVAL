@@ -3,3 +3,6 @@ uvicorn
 pydantic
 python-dotenv
 chromadb
+python-multipart
+PyPDF2
+langchain-text-splitters
