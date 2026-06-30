@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from db.chroma_client import test_chroma_connection
 
 app = FastAPI(
     title="RAG-Eval API",
@@ -23,3 +24,11 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+@app.get("/chroma-test")
+async def chroma_test():
+    try:
+        result = test_chroma_connection()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"ChromaDB Error: {str(e)}")
