@@ -1,9 +1,16 @@
 import os
+import re
 from google import genai
 from google.genai import types
 
 def get_client():
     return genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+def extract_float(text: str) -> float:
+    match = re.search(r'(0\.\d+|1\.0|0|1)', text)
+    if match:
+        return float(match.group(1))
+    return 0.0
 
 def evaluate_faithfulness(answer: str, retrieved_chunks: list[str]) -> float:
     """
@@ -34,12 +41,14 @@ Faithfulness Score (0.0 to 1.0):"""
             model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
-                temperature=0.0,
-                max_output_tokens=10
+                temperature=0.0
             )
         )
-        score_text = response.text.strip()
-        return float(score_text)
+        if response.text:
+            return extract_float(response.text.strip())
+        else:
+            print("Faithfulness Eval Error: response.text is None")
+            return 0.0
     except Exception as e:
         print(f"Faithfulness Eval Error: {e}")
         return 0.0
@@ -72,12 +81,14 @@ Relevance Score (0.0 to 1.0):"""
             model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
-                temperature=0.0,
-                max_output_tokens=10
+                temperature=0.0
             )
         )
-        score_text = response.text.strip()
-        return float(score_text)
+        if response.text:
+            return extract_float(response.text.strip())
+        else:
+            print("Relevance Eval Error: response.text is None")
+            return 0.0
     except Exception as e:
         print(f"Relevance Eval Error: {e}")
         return 0.0
