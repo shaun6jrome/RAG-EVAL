@@ -1,0 +1,1 @@
+RAG-Eval is a system for observability and evaluation of Retrieval-Augmented Generation. It provides faithfulness and relevance scores out of the box.
