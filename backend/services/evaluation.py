@@ -43,3 +43,41 @@ Faithfulness Score (0.0 to 1.0):"""
     except Exception as e:
         print(f"Faithfulness Eval Error: {e}")
         return 0.0
+
+def evaluate_relevance(query: str, answer: str) -> float:
+    """
+    Evaluates if the answer is relevant to the question (0.0 to 1.0).
+    A relevant answer actually addresses the core of the user's question.
+    """
+    if not answer or not query:
+        return 0.0
+        
+    client = get_client()
+    
+    prompt = f"""You are an expert evaluator. Your task is to evaluate the relevance of an answer to a given question.
+An answer is relevant if it directly addresses the question being asked. 
+Output ONLY a float value between 0.0 and 1.0 representing the relevance score.
+Do not output any explanation, just the number.
+
+Question:
+{query}
+
+Answer:
+{answer}
+
+Relevance Score (0.0 to 1.0):"""
+
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.0,
+                max_output_tokens=10
+            )
+        )
+        score_text = response.text.strip()
+        return float(score_text)
+    except Exception as e:
+        print(f"Relevance Eval Error: {e}")
+        return 0.0
