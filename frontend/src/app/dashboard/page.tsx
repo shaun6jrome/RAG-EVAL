@@ -180,6 +180,50 @@ export default function Dashboard() {
           </motion.div>
         </div>
       )}
+
+      {!isLoading && logs.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mt-6 glass-panel p-6 rounded-2xl"
+        >
+          <h2 className="text-xl font-heading font-semibold mb-6 flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-indigo-400" />
+            Evaluation Scores Trend
+          </h2>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={logs}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                <XAxis dataKey="id" stroke="#666" tick={{ fill: '#666' }} />
+                <YAxis stroke="#666" tick={{ fill: '#666' }} domain={[0, 1]} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '8px' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="faithfulness_score" 
+                  name="Faithfulness"
+                  stroke="#4ade80" 
+                  strokeWidth={2}
+                  dot={{ fill: '#4ade80', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="relevance_score" 
+                  name="Relevance"
+                  stroke="#fbbf24" 
+                  strokeWidth={2}
+                  dot={{ fill: '#fbbf24', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
