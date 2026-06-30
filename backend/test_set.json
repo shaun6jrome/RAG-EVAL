@@ -1,0 +1,10 @@
+[
+  {
+    "query": "What is the capital of France?",
+    "ground_truth_chunks": ["Paris is the capital of France."]
+  },
+  {
+    "query": "How do you build a RAG system?",
+    "ground_truth_chunks": ["A RAG system consists of ingestion, retrieval, and generation layers."]
+  }
+]
