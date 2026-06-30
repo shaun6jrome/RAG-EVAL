@@ -105,6 +105,12 @@ export default function ChatInterface() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userMsg.content, top_k: 3 }),
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(typeof errorData.detail === 'string' ? errorData.detail : "Server error");
+      }
+      
       const data = await res.json();
       
       const assistantMsg: Message = {
@@ -117,7 +123,8 @@ export default function ChatInterface() {
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
       console.error(error);
-      setMessages((prev) => [...prev, { id: Date.now().toString(), role: "assistant", content: "Error connecting to server." }]);
+      const errorMessage = error instanceof Error ? error.message : "Error connecting to server.";
+      setMessages((prev) => [...prev, { id: Date.now().toString(), role: "assistant", content: errorMessage }]);
     } finally {
       setIsLoading(false);
     }
