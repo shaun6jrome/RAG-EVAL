@@ -1,0 +1,108 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Activity, Clock, DollarSign, ShieldCheck, Target, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+
+type DashboardStats = {
+  total_queries: number;
+  avg_latency: number;
+  total_cost: number;
+  avg_faithfulness: number;
+  avg_relevance: number;
+  avg_precision: number;
+};
+
+export default function Dashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/dashboard/stats");
+        const data = await res.json();
+        setStats(data);
+      } catch (err) {
+        console.error("Failed to fetch dashboard stats", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStats();
+    // Poll every 5 seconds for updates
+    const interval = setInterval(fetchStats, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
+      <header className="flex justify-between items-center mb-8 glass-panel p-4 px-6">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-[var(--color-accent)] tracking-tight">
+            Observability Dashboard
+          </h1>
+          <p className="text-sm text-gray-400 font-sans">RAG System Performance & Evals</p>
+        </div>
+        
+        <Link href="/" className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm font-medium">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Chat
+        </Link>
+      </header>
+
+      {isLoading && !stats ? (
+        <div className="flex justify-center p-12">
+          <Activity className="w-8 h-8 animate-spin text-[var(--color-accent)]" />
+        </div>
+      ) : (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        >
+          {/* Stats Cards */}
+          <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2">
+            <div className="flex justify-between items-center text-gray-400">
+              <span className="text-sm font-medium">Total Queries</span>
+              <Activity className="w-4 h-4" />
+            </div>
+            <span className="text-3xl font-bold font-mono">{stats?.total_queries || 0}</span>
+          </div>
+
+          <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2">
+            <div className="flex justify-between items-center text-gray-400">
+              <span className="text-sm font-medium">Avg Latency</span>
+              <Clock className="w-4 h-4" />
+            </div>
+            <span className="text-3xl font-bold font-mono">
+              {stats?.avg_latency ? `${stats.avg_latency.toFixed(0)} ms` : "0 ms"}
+            </span>
+          </div>
+
+          <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2">
+            <div className="flex justify-between items-center text-gray-400">
+              <span className="text-sm font-medium">Avg Faithfulness</span>
+              <ShieldCheck className="w-4 h-4 text-green-400" />
+            </div>
+            <span className="text-3xl font-bold font-mono text-green-400">
+              {stats?.avg_faithfulness ? stats.avg_faithfulness.toFixed(2) : "N/A"}
+            </span>
+          </div>
+
+          <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2">
+            <div className="flex justify-between items-center text-gray-400">
+              <span className="text-sm font-medium">Avg Relevance</span>
+              <Target className="w-4 h-4 text-amber-400" />
+            </div>
+            <span className="text-3xl font-bold font-mono text-amber-400">
+              {stats?.avg_relevance ? stats.avg_relevance.toFixed(2) : "N/A"}
+            </span>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
