@@ -1,13 +1,15 @@
 import os
-from google import genai
-from google.genai import types
+import openai
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Initialize Gemini Client
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Initialize Groq Client
+client = openai.OpenAI(
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
 
 def generate_answer(query: str, retrieved_chunks: list[dict]) -> str:
     """
@@ -27,12 +29,10 @@ Context:
 Question: {query}
 Answer:"""
 
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.0
-        )
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.0
     )
     
-    return response.text
+    return response.choices[0].message.content

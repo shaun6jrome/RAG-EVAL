@@ -1,10 +1,12 @@
 import os
 import re
-from google import genai
-from google.genai import types
+import openai
 
 def get_client():
-    return genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    return openai.OpenAI(
+        api_key=os.getenv("GROQ_API_KEY"),
+        base_url="https://api.groq.com/openai/v1"
+    )
 
 def extract_float(text: str) -> float:
     match = re.search(r'(0\.\d+|1\.0|0|1)', text)
@@ -37,17 +39,16 @@ Answer:
 Faithfulness Score (0.0 to 1.0):"""
 
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.0
-            )
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0
         )
-        if response.text:
-            return extract_float(response.text.strip())
+        response_text = response.choices[0].message.content
+        if response_text:
+            return extract_float(response_text.strip())
         else:
-            print("Faithfulness Eval Error: response.text is None")
+            print("Faithfulness Eval Error: response text is None")
             return 0.0
     except Exception as e:
         print(f"Faithfulness Eval Error: {e}")
@@ -77,17 +78,16 @@ Answer:
 Relevance Score (0.0 to 1.0):"""
 
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.0
-            )
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0
         )
-        if response.text:
-            return extract_float(response.text.strip())
+        response_text = response.choices[0].message.content
+        if response_text:
+            return extract_float(response_text.strip())
         else:
-            print("Relevance Eval Error: response.text is None")
+            print("Relevance Eval Error: response text is None")
             return 0.0
     except Exception as e:
         print(f"Relevance Eval Error: {e}")

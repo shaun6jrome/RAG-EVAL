@@ -179,13 +179,8 @@ async def run_eval_suite():
             answer = generate_answer(query, chunks)
             chunk_texts = [c["document"] for c in chunks]
             
-            # Avoid Gemini free tier rate limits (15 RPM)
-            await asyncio.sleep(4) 
-            
             faithfulness = evaluate_faithfulness(answer, chunk_texts)
-            await asyncio.sleep(4)
             relevance = evaluate_relevance(query, answer)
-            await asyncio.sleep(4)
             
             total_faithfulness += faithfulness
             total_relevance += relevance
