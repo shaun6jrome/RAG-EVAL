@@ -11,7 +11,7 @@ def retrieve_chunks(query: str, top_k: int = 3) -> list[dict]:
     if collection.count() == 0:
         return []
         
-    query_embedding = get_embedding(query)
+    query_embedding = get_embedding(query, is_query=True)
     
     results = collection.query(
         query_embeddings=[query_embedding],

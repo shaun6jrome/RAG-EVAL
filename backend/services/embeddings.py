@@ -1,14 +1,23 @@
 import uuid
-from sentence_transformers import SentenceTransformer
+import os
+import google.generativeai as genai
 from db.chroma_client import get_chroma_client
+from dotenv import load_dotenv
 
-# Load the local model (downloads on first run)
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# Load environment variables
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-def get_embedding(text: str) -> list[float]:
-    """Generates an embedding for a given text."""
-    embedding = model.encode(text)
-    return embedding.tolist()
+def get_embedding(text: str, is_query: bool = False) -> list[float]:
+    """Generates an embedding for a given text using Gemini API."""
+    task_type = "retrieval_query" if is_query else "retrieval_document"
+    
+    result = genai.embed_content(
+        model="models/text-embedding-004",
+        content=text,
+        task_type=task_type
+    )
+    return result['embedding']
 
 def generate_and_store_embeddings(chunks: list[str], source_filename: str):
     """Generates embeddings for chunks and stores them in ChromaDB."""
@@ -23,7 +32,7 @@ def generate_and_store_embeddings(chunks: list[str], source_filename: str):
     for i, chunk in enumerate(chunks):
         # Generate unique ID for each chunk
         chunk_id = f"{source_filename}_{uuid.uuid4()}_{i}"
-        embedding = get_embedding(chunk)
+        embedding = get_embedding(chunk, is_query=False)
         
         ids.append(chunk_id)
         embeddings.append(embedding)
