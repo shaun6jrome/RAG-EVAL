@@ -1,25 +1,16 @@
-import uuid
 import os
-import google.generativeai as genai
-from db.chroma_client import get_chroma_client
-from dotenv import load_dotenv
+from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 
-# Load environment variables
-load_dotenv()
+# Point ChromaDB to look for the model files directly inside our git repository!
+# This bypasses the need for Render to download 80MB over the internet at startup,
+# which prevents the httpx timeout from crashing the deployment.
+repo_root = os.path.dirname(os.path.dirname(__file__))
+ONNXMiniLM_L6_V2.DOWNLOAD_PATH = os.path.join(repo_root, "onnx_models", "all-MiniLM-L6-v2")
 
-# Securely reconstruct the key to avoid automated GitHub revocation
-# This bypasses the need for the Render dashboard configuration!
-part1 = "AQ.Ab8RN6LBGBUobMO02nx"
-part2 = "u8511CAOBRMVasV_AGNwRtmVeFOUvHw"
-genai.configure(api_key=part1 + part2)
+# Initialize the ONNX model (it will find the local files instantly)
+onnx_ef = ONNXMiniLM_L6_V2(preferred_providers=["CPUExecutionProvider"])
 
 def get_embedding(text: str, is_query: bool = False) -> list[float]:
-    """Generates an embedding for a given text using Gemini API."""
-    task_type = "retrieval_query" if is_query else "retrieval_document"
-    
-    result = genai.embed_content(
-        model="models/text-embedding-004",
-        content=text,
-        task_type=task_type
-    )
-    return result['embedding']
+    """Generates an embedding using the self-contained ONNX model."""
+    embeddings = onnx_ef([text])
+    return embeddings[0]

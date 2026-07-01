@@ -4,8 +4,8 @@ chromadb
 python-multipart
 python-dotenv
 openai
-google-generativeai
 pydantic
 PyPDF2
+onnxruntime
 slowapi
 langchain-text-splitters
