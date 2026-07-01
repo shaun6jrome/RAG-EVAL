@@ -20,7 +20,7 @@ def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
         # Fallback to simple utf-8 decode for txt, md, etc.
         return file_bytes.decode("utf-8", errors="ignore")
 
-def chunk_text(text: str, chunk_size: int = 500, chunk_overlap: int = 50) -> list[str]:
+def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> list[str]:
     """Splits text into chunks using LangChain's RecursiveCharacterTextSplitter."""
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,

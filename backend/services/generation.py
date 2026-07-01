@@ -24,8 +24,10 @@ def generate_answer(query: str, retrieved_chunks: list[dict]) -> dict:
         
     context = "\n\n---\n\n".join([chunk["document"] for chunk in retrieved_chunks])
     
-    prompt = f"""You are a helpful AI assistant. Use the following retrieved context to answer the user's question.
-If the answer is not contained within the context, say "I don't know based on the provided context."
+    prompt = f"""You are a friendly, conversational AI assistant interacting with a user about a specific document.
+Use the following retrieved context to answer the user's question clearly and politely. If the context contains lists or complex information, summarize it in a readable, conversational tone.
+
+If the answer is not contained within the context, politely say "I'm sorry, but I don't see that information in the provided document."
 
 Context:
 {context}
