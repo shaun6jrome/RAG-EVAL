@@ -1,78 +1,48 @@
-# RAG-Eval
+# RAG-Eval Pipeline (2026 Edition)
 
-RAG-Eval is a Retrieval-Augmented Generation (RAG) pipeline built with evaluation and observability as first-class citizens. Unlike most RAG chatbots that just answer questions, RAG-Eval automatically scores its own answers for faithfulness and relevance using an LLM-as-a-judge pattern, while tracking performance metrics like latency and cost.
+Welcome to the RAG-Eval project. This project was built to be a fully observable, highly accurate, and completely free RAG pipeline.
 
-## Features
+## 🕰️ Future-Proofing (For your 2029 self)
+If you are opening this project years from now, here is how we ensured it will still work:
 
-- **Ingestion & Retrieval**: Upload documents (PDF, TXT, MD), chunk them automatically, embed them using local SentenceTransformers (`all-MiniLM-L6-v2`), and store them in ChromaDB.
-- **Generation**: Powered by Google's Gemini Flash API for high-quality answers.
-- **Continuous Evaluation**: Every answer is evaluated asynchronously for:
-  - **Faithfulness**: Is the answer supported by the retrieved context?
-  - **Relevance**: Does the answer actually address the user's question?
-- **Observability Dashboard**: Tracks query volume, latency trends, cost, and evaluation score trends.
-- **Dark Cinematic UI**: A beautiful Glassmorphism interface built with Next.js and Tailwind CSS.
+### 1. The Embeddings & Database are 100% Local
+We intentionally removed all reliance on cloud embedding APIs (like Google Gemini or OpenAI). Instead, the `all-MiniLM-L6-v2` ONNX model is committed directly to this repository (`backend/onnx_models`). When the server starts, it loads the model from disk into ChromaDB. 
+* **Why this matters:** You will never face an "API Deprecated", "Rate Limit Exceeded", or "Timeout" error during startup or document upload. The core RAG engine is entirely self-contained.
 
-## Architecture
+### 2. Pinned Dependencies
+All Python dependencies in `backend/requirements.txt` are pinned to their exact versions from July 2026. This guarantees that future, backwards-incompatible releases of FastAPI, ChromaDB, or LangChain will not break your build.
 
-1. **Backend**: FastAPI (Python)
-   - `/upload`: Handles document ingestion, chunking (LangChain), and embedding (ChromaDB).
-   - `/ask`: Retrieves relevant chunks, queries Gemini, logs the query to SQLite, and triggers a background task for evaluation.
-   - `/eval/run`: Runs a test suite (`test_set.json`) to compute aggregate precision/recall/faithfulness/relevance.
-2. **Frontend**: Next.js (React) + Tailwind CSS
-   - Chat Interface: Chat with your documents and view context.
-   - Dashboard: Monitor metrics and evaluation scores.
+### 3. Swappable LLM Generation
+The only external dependency is the Groq API, used in `backend/services/generation.py` to generate the final chat answers.
+If Groq no longer exists or changes their free tier, **do not panic**. 
+We used the standard `openai.OpenAI` Python client. You can instantly swap to any modern LLM by changing two lines in `generation.py`:
+```python
+client = openai.OpenAI(
+    api_key="YOUR_NEW_API_KEY",
+    base_url="https://api.openai.com/v1" # Or any local server like Ollama (http://localhost:11434/v1)
+)
+```
 
-## Setup Instructions
+## 🚀 Running Locally
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- A Gemini API Key
+### Backend (Python/FastAPI)
+1. `cd backend`
+2. Create a virtual environment: `python -m venv venv`
+3. Activate it: `source venv/bin/activate` (Mac/Linux) or `.\venv\Scripts\activate` (Windows)
+4. Install exactly pinned packages: `pip install -r requirements.txt`
+5. Create a `.env` file with `GROQ_API_KEY=your_key_here`
+6. Run the server: `uvicorn main:app --reload`
 
-### Backend Setup
+### Frontend (Next.js)
+1. `cd frontend`
+2. Install packages: `npm install`
+3. Run the dev server: `npm run dev`
+4. Ensure the `.env.local` points to your backend: `NEXT_PUBLIC_API_URL=http://localhost:8000`
 
-1. Navigate to the `backend` directory:
-   ```bash
-   cd backend
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Set your Gemini API Key:
-   ```bash
-   export GEMINI_API_KEY="your_api_key_here"
-   ```
-4. Start the FastAPI server:
-   ```bash
-   uvicorn main:app --reload
-   ```
-   The backend will run on `http://localhost:8000`.
-
-### Frontend Setup
-
-1. Navigate to the `frontend` directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Next.js development server:
-   ```bash
-   npm run dev
-   ```
-   The frontend will run on `http://localhost:3000`.
-
-### Running a Demo
-
-1. With the backend running, use the ingestion script to upload a demo file:
-   ```bash
-   cd backend/scripts
-   python ingest_demo.py
-   ```
-2. Open the frontend and ask: "What is RAG-Eval?"
-
-## License
-MIT
+## 📊 Architecture
+- **Frontend**: Next.js, React, Tailwind CSS, Framer Motion
+- **Backend**: FastAPI, Python
+- **Vector DB**: ChromaDB (Local Ephemeral/Persistent)
+- **Embeddings**: ONNX `all-MiniLM-L6-v2` (Local)
+- **LLM**: Llama-3 (via Groq API)
+- **Evals**: Faithfulness & Relevance scoring on every turn
