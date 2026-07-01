@@ -2,33 +2,51 @@
 
 **RAG-Eval** is a production-ready Retrieval-Augmented Generation (RAG) pipeline built with observability and automated evaluation as first-class citizens. 
 
-While most RAG applications blindly retrieve documents and generate answers, they lack the mechanisms to detect hallucinations or measure the quality of their responses. RAG-Eval solves this by implementing an **LLM-as-a-judge** pattern that automatically scores every single answer for Faithfulness and Relevance in the background, all while providing a beautiful dashboard to monitor system latency, cost, and query volume.
-
 🌐 **Live Demo:** [https://rag-eval-zeta.vercel.app/](https://rag-eval-zeta.vercel.app/)
 
 ---
 
-## 🎯 Use Case & Purpose
+## 🧠 What is RAG? (And why do we need it?)
 
-The primary use case of RAG-Eval is to provide a reliable, hallucination-free way to query private documents (like company knowledge bases, research papers, or personal resumes). 
+**RAG** stands for **Retrieval-Augmented Generation**. 
 
-**Key Problems Solved:**
-1. **Hallucination Detection:** By scoring the "Faithfulness" of every response, the system proves whether its answer was actually derived from the uploaded document, or if the AI made it up.
-2. **Zero-Dependency Vectorization:** Cloud embedding APIs (like OpenAI's) cost money and can rate-limit you. This project solves that by running a highly optimized ONNX embedding model locally, meaning ingesting thousands of documents is completely free and requires zero internet connectivity.
-3. **Observability:** It provides a visual dashboard to track exactly how much the system costs to run per query, how fast it is responding, and how accurate it is over time.
+Standard Large Language Models (LLMs) like ChatGPT or Llama are trained on massive public datasets, but they have two major flaws:
+1. **They lack private knowledge:** They don't know about your company's internal documents, your personal resume, or data created after their training cut-off.
+2. **They hallucinate:** When they don't know an answer, they often confidently make things up.
+
+**RAG solves this by combining "Search" with "Generation".** 
+Instead of relying on the LLM's internal memory, a RAG pipeline first *Retrieves* relevant facts from a database of your private documents, and then *Augments* the LLM's prompt with those facts, instructing the LLM to *Generate* an answer based strictly on the provided context. 
+
+This results in highly accurate, up-to-date, and domain-specific responses while drastically reducing hallucinations.
 
 ---
 
-## ⚙️ How It Works (The Pipeline)
+## 🎯 Why I Built This Project
 
-1. **Ingestion & Chunking:** When a user uploads a PDF, Markdown, or Text file, the backend extracts the text and splits it into logical, overlapping chunks (1000 characters each) to preserve context.
-2. **Local Embedding:** These chunks are instantly converted into vector embeddings using a lightweight, locally hosted `all-MiniLM-L6-v2` ONNX model. No cloud API is used for this step.
-3. **Vector Storage:** The embeddings are saved into a local ChromaDB instance for lightning-fast semantic search.
-4. **Retrieval & Generation:** When a user asks a question, their query is embedded and compared against the database. The top 3 most relevant chunks are retrieved and sent to a powerful LLM (Llama-3 via Groq) alongside a strict system prompt to generate a conversational, accurate answer.
-5. **Continuous Evaluation:** After the answer is sent to the user, a background task spins up. A secondary "Judge" LLM looks at the user's question, the retrieved context, and the generated answer. It computes a score from 0.0 to 1.0 for:
-   - **Faithfulness:** Does the context support the answer?
-   - **Relevance:** Did the answer actually address the prompt?
-6. **Telemetry:** The scores, token costs, and latency are logged to a SQLite database and instantly visualized on the Next.js frontend Dashboard.
+Building a simple RAG chatbot is easy. Building a **reliable, production-grade** RAG system is incredibly difficult. 
+
+I built **RAG-Eval** to showcase mastery over the entire AI engineering lifecycle. Most beginners stop at generating an answer. This project goes further by addressing the hardest challenges in modern AI:
+1. **Hallucination Detection:** How do we prove the AI isn't lying? I implemented an **LLM-as-a-judge** loop (Step 11) that automatically scores every single answer for *Faithfulness* and *Relevance*.
+2. **Zero-Dependency Vectorization:** Cloud embedding APIs (like OpenAI's) cost money and cause rate limits. I bypassed this entirely by deploying a highly optimized ONNX embedding model locally.
+3. **Observability:** You can't improve what you can't measure. I built a comprehensive dashboard to track token costs, latency, and evaluation scores in real-time.
+
+---
+
+## ⚙️ The 11-Step Architecture (How It Works)
+
+This pipeline closely follows the industry-standard 11-step RAG architecture:
+
+1. **User Query:** The user asks a question via the Next.js chat interface.
+2. **Query Preprocessing:** The backend (FastAPI) receives the query.
+3. **Embedding Model:** A local `all-MiniLM-L6-v2` ONNX model instantly converts the text query into a semantic vector representation. *(No cloud APIs used)*.
+4. **Vector Database:** The vector is sent to a local ChromaDB instance, which stores the embeddings of all previously uploaded documents (which were chunked using LangChain's Recursive splitter).
+5. **Retriever:** ChromaDB performs a Dense Similarity Search.
+6. **Top-k Relevant Documents:** The retriever returns the top 3 most relevant document chunks.
+7. **Context Augmentation:** The backend merges these retrieved document chunks with the user's original query.
+8. **Prompt Template:** The System Prompt + Retrieved Context + User Question are combined into a single, strict final prompt.
+9. **Large Language Model (LLM):** The prompt is sent to Llama-3 (via the Groq API) for high-speed inference.
+10. **Generated Response:** An accurate, grounded answer is returned to the user interface.
+11. **Evaluation & Feedback:** In the background, a secondary "Judge" LLM evaluates the interaction, calculating scores for **Faithfulness** (did the context support the answer?) and **Relevance** (did it answer the prompt?). These metrics are logged to SQLite and displayed on the Dashboard.
 
 ---
 
