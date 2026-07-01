@@ -359,3 +359,5 @@ export default function ChatInterface() {
     </div>
   );
 }
+
+// Force Vercel cache reset deployment
