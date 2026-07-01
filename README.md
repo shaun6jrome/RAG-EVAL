@@ -1,46 +1,69 @@
-# RAG-Eval Pipeline (2026 Edition)
+# RAG-Eval: Observable & Self-Evaluating RAG Pipeline
 
-Welcome to the **RAG-Eval** project. This project is a fully observable, highly accurate, and completely free Retrieval-Augmented Generation (RAG) pipeline. Unlike most RAG chatbots that just answer questions blindly, RAG-Eval automatically scores its own answers for **faithfulness** and **relevance** using an LLM-as-a-judge pattern, while tracking performance metrics like latency and cost.
+**RAG-Eval** is a production-ready Retrieval-Augmented Generation (RAG) pipeline built with observability and automated evaluation as first-class citizens. 
+
+While most RAG applications blindly retrieve documents and generate answers, they lack the mechanisms to detect hallucinations or measure the quality of their responses. RAG-Eval solves this by implementing an **LLM-as-a-judge** pattern that automatically scores every single answer for Faithfulness and Relevance in the background, all while providing a beautiful dashboard to monitor system latency, cost, and query volume.
 
 🌐 **Live Demo:** [https://rag-eval-zeta.vercel.app/](https://rag-eval-zeta.vercel.app/)
 
 ---
 
-## ✨ Features
+## 🎯 Use Case & Purpose
 
-- **End-to-End RAG Pipeline:** Upload documents (PDF, TXT, MD), chunk them automatically, and query them in natural language.
-- **Continuous Evaluation:** Every single answer is evaluated asynchronously in the background for:
-  - **Faithfulness:** Is the answer fully supported by the retrieved context? (No hallucinations)
-  - **Relevance:** Does the answer actually address the user's question?
-- **Observability Dashboard:** A dedicated analytics page that tracks query volume, latency trends, cost per query, and aggregate evaluation score trends.
-- **100% Local Embeddings:** We intentionally removed all reliance on cloud embedding APIs. Documents are embedded instantly using a local `all-MiniLM-L6-v2` ONNX model and stored in a local ChromaDB instance.
-- **Dark Cinematic UI:** A beautiful, responsive Glassmorphism interface built with Next.js, Tailwind CSS v4, and Framer Motion.
+The primary use case of RAG-Eval is to provide a reliable, hallucination-free way to query private documents (like company knowledge bases, research papers, or personal resumes). 
+
+**Key Problems Solved:**
+1. **Hallucination Detection:** By scoring the "Faithfulness" of every response, the system proves whether its answer was actually derived from the uploaded document, or if the AI made it up.
+2. **Zero-Dependency Vectorization:** Cloud embedding APIs (like OpenAI's) cost money and can rate-limit you. This project solves that by running a highly optimized ONNX embedding model locally, meaning ingesting thousands of documents is completely free and requires zero internet connectivity.
+3. **Observability:** It provides a visual dashboard to track exactly how much the system costs to run per query, how fast it is responding, and how accurate it is over time.
 
 ---
 
-## 📊 Architecture
+## ⚙️ How It Works (The Pipeline)
 
-- **Frontend:** Next.js (App Router), React, Tailwind CSS v4, Recharts, Framer Motion
-- **Backend:** FastAPI, Python, SQLite (for logging)
-- **Vector DB:** ChromaDB (Local Persistent)
-- **Embeddings:** ONNX `all-MiniLM-L6-v2` (Local, zero API keys required)
-- **LLM Generator:** Llama-3 (via Groq API, using the standard OpenAI Python client)
+1. **Ingestion & Chunking:** When a user uploads a PDF, Markdown, or Text file, the backend extracts the text and splits it into logical, overlapping chunks (1000 characters each) to preserve context.
+2. **Local Embedding:** These chunks are instantly converted into vector embeddings using a lightweight, locally hosted `all-MiniLM-L6-v2` ONNX model. No cloud API is used for this step.
+3. **Vector Storage:** The embeddings are saved into a local ChromaDB instance for lightning-fast semantic search.
+4. **Retrieval & Generation:** When a user asks a question, their query is embedded and compared against the database. The top 3 most relevant chunks are retrieved and sent to a powerful LLM (Llama-3 via Groq) alongside a strict system prompt to generate a conversational, accurate answer.
+5. **Continuous Evaluation:** After the answer is sent to the user, a background task spins up. A secondary "Judge" LLM looks at the user's question, the retrieved context, and the generated answer. It computes a score from 0.0 to 1.0 for:
+   - **Faithfulness:** Does the context support the answer?
+   - **Relevance:** Did the answer actually address the prompt?
+6. **Telemetry:** The scores, token costs, and latency are logged to a SQLite database and instantly visualized on the Next.js frontend Dashboard.
+
+---
+
+## 🛠️ Detailed Tech Stack
+
+### Frontend
+- **Next.js 16 (App Router):** The core React framework used for server-side rendering and routing.
+- **Tailwind CSS v4:** Used for the dark-mode, glassmorphism UI styling, allowing for rapid, responsive design without writing custom CSS files.
+- **Framer Motion:** Powers the smooth micro-animations, chat bubble pop-ins, and smooth accordion drop-downs.
+- **Recharts:** Renders the interactive trend graphs on the observability dashboard.
+- **Lucide React:** Clean, consistent iconography used throughout the interface.
+
+### Backend
+- **FastAPI (Python):** A lightning-fast, asynchronous web framework that handles the API routes, document uploads, and background evaluation tasks.
+- **ChromaDB:** A high-performance, open-source vector database used to store and query the document embeddings.
+- **ONNX Runtime:** Executes the `all-MiniLM-L6-v2` model directly on the CPU for free, instantaneous text embeddings.
+- **LangChain:** Used specifically for its robust `RecursiveCharacterTextSplitter` to intelligently chunk documents without breaking sentences.
+- **Groq API / OpenAI Client:** The `openai` Python SDK is used to interface with Groq's ultra-fast LPU inference engine, running the `llama3-8b-8192` model for generation and evaluation.
+- **SQLite:** A lightweight, serverless relational database used to persist all chat logs, token costs, latency metrics, and evaluation scores.
 
 ---
 
 ## 🚀 Running Locally
 
-### Backend (Python/FastAPI)
+### Backend Setup (Python)
 1. Navigate to the backend folder:
    ```bash
    cd backend
    ```
-2. Create a virtual environment:
+2. Create and activate a virtual environment:
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: .\venv\Scripts\activate
    ```
-3. Install exactly pinned packages:
+3. Install the pinned, stable dependencies:
    ```bash
    pip install -r requirements.txt
    ```
@@ -48,51 +71,38 @@ Welcome to the **RAG-Eval** project. This project is a fully observable, highly 
    ```env
    GROQ_API_KEY=your_key_here
    ```
-5. Run the server:
+5. Run the FastAPI server:
    ```bash
    uvicorn main:app --reload
    ```
-   *The backend will run on `http://localhost:8000`.*
+   *The backend will be available at `http://localhost:8000`.*
 
-### Frontend (Next.js)
+### Frontend Setup (Next.js)
 1. Navigate to the frontend folder:
    ```bash
    cd frontend
    ```
-2. Install packages:
+2. Install the Node packages:
    ```bash
    npm install
    ```
-3. Ensure the `.env.local` points to your backend:
+3. Ensure the `.env.local` points to your running backend:
    ```env
    NEXT_PUBLIC_API_URL=http://localhost:8000
    ```
-4. Run the dev server:
+4. Start the development server:
    ```bash
    npm run dev
    ```
-   *The frontend will run on `http://localhost:3000`.*
+   *The frontend will be available at `http://localhost:3000`.*
 
 ---
 
-## 🕰️ Future-Proofing (For your 2029 self)
-
-If you are opening this project years from now, here is how we ensured it will still work flawlessly:
-
-### 1. The Embeddings & Database are 100% Local
-We committed the `all-MiniLM-L6-v2` ONNX model directly to this repository (`backend/onnx_models`). When the server starts, it loads the model from disk into ChromaDB. You will never face an "API Deprecated", "Rate Limit Exceeded", or "Timeout" error during document upload. The core RAG engine is entirely self-contained.
-
-### 2. Pinned Dependencies
-All Python dependencies in `backend/requirements.txt` are pinned to their exact versions from July 2026. This guarantees that future, backwards-incompatible releases of FastAPI, ChromaDB, or LangChain will not break your build.
-
-### 3. Swappable LLM Generation
-The only external dependency is the Groq API. If Groq no longer exists or changes their free tier, **do not panic**. We used the standard `openai.OpenAI` Python client. You can instantly swap to any modern LLM by changing two lines in `backend/services/generation.py`:
-```python
-client = openai.OpenAI(
-    api_key="YOUR_NEW_API_KEY",
-    base_url="https://api.openai.com/v1" # Or any local server like Ollama (http://localhost:11434/v1)
-)
-```
+## 🔮 Long-Term Maintainability
+This project was architected to be highly resilient against software rot:
+- **Zero Cloud Embedding Lock-in:** Because the ONNX model is stored directly in the repository (`backend/onnx_models`), the application does not rely on third-party embedding APIs that could be deprecated or put behind a paywall.
+- **Pinned Dependencies:** The `requirements.txt` is strictly version-pinned to ensure future, breaking updates to libraries like LangChain or FastAPI do not crash the application.
+- **Swappable LLM:** Because the generation script uses the standard OpenAI Python SDK format, the primary AI model can be instantly swapped from Groq to OpenAI, Anthropic, or even a local Ollama instance simply by changing the `base_url` variable.
 
 ---
 *Designed & Built as a Showcase of Observable AI Engineering.*
