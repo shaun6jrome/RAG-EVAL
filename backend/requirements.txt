@@ -6,6 +6,5 @@ python-dotenv
 openai
 pydantic
 PyPDF2
-onnxruntime
 slowapi
 langchain-text-splitters
