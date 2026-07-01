@@ -66,7 +66,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
-      <header className="flex justify-between items-center mb-8 glass-panel p-4 px-6">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 glass-panel p-4 px-4 sm:px-6">
         <div>
           <h1 className="text-2xl font-heading font-bold text-[var(--color-accent)] tracking-tight">
             Observability Dashboard
@@ -74,16 +74,16 @@ export default function Dashboard() {
           <p className="text-sm text-gray-400 font-sans">RAG System Performance & Evals</p>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
           <button 
             onClick={runEvalSuite}
             disabled={isEvalRunning}
-            className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-[var(--color-accent)] hover:text-black transition-colors text-sm font-medium rounded-lg disabled:opacity-50"
+            className="glass-panel px-3 sm:px-4 py-2 flex items-center justify-center gap-2 hover:bg-[var(--color-accent)] hover:text-black transition-colors text-xs sm:text-sm font-medium rounded-lg disabled:opacity-50 flex-1 sm:flex-none whitespace-nowrap"
           >
             {isEvalRunning ? <Activity className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-            {isEvalRunning ? "Running Suite..." : "Run Eval Suite"}
+            {isEvalRunning ? "Running..." : "Run Eval Suite"}
           </button>
-          <Link href="/" className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm font-medium">
+          <Link href="/" className="glass-panel px-3 sm:px-4 py-2 flex items-center justify-center gap-2 hover:bg-white/10 transition-colors text-xs sm:text-sm font-medium flex-1 sm:flex-none whitespace-nowrap">
             <ArrowLeft className="w-4 h-4" />
             Back to Chat
           </Link>
@@ -97,7 +97,7 @@ export default function Dashboard() {
           className="mb-8 glass-panel p-6 rounded-2xl border border-[var(--color-accent)]"
         >
           <h2 className="text-xl font-heading font-semibold mb-4 text-[var(--color-accent)]">Eval Suite Results</h2>
-          <div className="flex gap-8 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 mb-6">
             <div>
               <p className="text-sm text-gray-400">Avg Faithfulness</p>
               <p className="text-2xl font-mono text-green-400">{evalResults.average_faithfulness.toFixed(2)}</p>

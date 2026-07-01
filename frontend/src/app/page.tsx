@@ -177,7 +177,7 @@ export default function ChatInterface() {
   return (
     <div className="flex flex-col h-screen max-w-4xl mx-auto p-4 md:p-8">
       {/* Header */}
-      <header className="flex justify-between items-center mb-8 glass-panel p-4 px-6">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 glass-panel p-4 px-4 sm:px-6">
         <div>
           <h1 className="text-2xl font-heading font-bold text-[var(--color-accent)] tracking-tight">
             RAG-Eval
@@ -185,12 +185,12 @@ export default function ChatInterface() {
           <p className="text-sm text-gray-400 font-sans">Observable RAG Pipeline</p>
         </div>
         
-        <div className="flex gap-4 items-center">
-          <Link href="/dashboard" className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm font-medium">
+        <div className="flex gap-2 sm:gap-4 items-center w-full sm:w-auto justify-between sm:justify-end">
+          <Link href="/dashboard" className="glass-panel px-3 sm:px-4 py-2 flex items-center justify-center gap-2 hover:bg-white/10 transition-colors text-xs sm:text-sm font-medium flex-1 sm:flex-none whitespace-nowrap">
             <BarChart2 className="w-4 h-4" />
             Dashboard
           </Link>
-          <label className="cursor-pointer glass-panel px-4 py-2 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm font-medium">
+          <label className="cursor-pointer glass-panel px-3 sm:px-4 py-2 flex items-center justify-center gap-2 hover:bg-white/10 transition-colors text-xs sm:text-sm font-medium flex-1 sm:flex-none whitespace-nowrap">
             {isUploading ? <Activity className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             <span>Upload Document</span>
             <input type="file" className="hidden" accept=".pdf,.txt,.md" onChange={handleUpload} disabled={isUploading} />
